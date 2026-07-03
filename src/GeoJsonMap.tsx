@@ -67,9 +67,11 @@ function ringToPath(ring: GeoJSONCoord[], close: boolean, state: MapState, vpW: 
 type FeatureEntry = {
   idx: number;
   geom: GeoJSONGeometry;
-  label: string;
   color: string;
-  extraProps: [string, string][];
+  title: string;
+  label: string;
+  valueName: string;
+  value: string;
 };
 
 function renderGeometry(
@@ -154,8 +156,10 @@ type TooltipData = {
   svgX: number;
   svgY: number;
   color: string;
+  title: string;
   label: string;
-  extraProps: [string, string][];
+  valueName: string;
+  value: string;
 };
 
 export function GeoJsonMap({
@@ -174,7 +178,9 @@ export function GeoJsonMap({
   const axisColor = dark ? "#9BA7B5" : "#6E7B8B";
 
   const geomCol    = settings.geometryColumn ?? "";
+  const titleCol   = settings.titleColumn ?? "";
   const labelCol   = settings.labelColumn ?? "";
+  const valueCol   = settings.valueColumn ?? "";
   const redCol     = settings.redColumn ?? "";
   const greenCol   = settings.greenColumn ?? "";
   const blueCol    = settings.blueColumn ?? "";
@@ -192,7 +198,9 @@ export function GeoJsonMap({
   const colIdx = (name: string) => cols.findIndex((c) => c.name === name);
 
   const geomIdx  = colIdx(geomCol);
+  const titleIdx = colIdx(titleCol);
   const labelIdx = colIdx(labelCol);
+  const valueIdx = colIdx(valueCol);
   const rIdx     = colIdx(redCol);
   const gIdx     = colIdx(greenCol);
   const bIdx     = colIdx(blueCol);
@@ -212,23 +220,17 @@ export function GeoJsonMap({
         ? `rgb(${Math.round(r)},${Math.round(g)},${Math.round(b)})`
         : defColor;
 
-      const label = labelIdx >= 0 && row[labelIdx] != null ? String(row[labelIdx]) : "";
+      const title     = titleIdx >= 0 && row[titleIdx] != null ? String(row[titleIdx]) : "";
+      const label     = labelIdx >= 0 && row[labelIdx] != null ? String(row[labelIdx]) : "";
+      const rawValue  = valueIdx >= 0 ? row[valueIdx] : null;
+      const valueName = valueIdx >= 0 ? (cols[valueIdx].display_name || cols[valueIdx].name || "") : "";
+      const value     = rawValue != null ? Number(rawValue).toLocaleString() : "";
 
-      // Extra props for tooltip: all non-geometry, non-rgb cols
-      const skipCols = new Set([geomIdx, rIdx, gIdx, bIdx]);
-      const extraProps: [string, string][] = cols
-        .map((c, ci) => [ci, c] as [number, typeof c])
-        .filter(([ci]) => !skipCols.has(ci))
-        .filter(([ci]) => ci !== labelIdx)
-        .filter(([, c]) => row[cols.indexOf(c)] != null)
-        .slice(0, 4)
-        .map(([ci, c]) => [c.display_name || c.name, String(row[ci])] as [string, string]);
-
-      result.push({ idx: i, geom, label, color, extraProps });
+      result.push({ idx: i, geom, color, title, label, valueName, value });
     }
     return result;
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rows, geomIdx, labelIdx, rIdx, gIdx, bIdx, defColor]);
+  }, [rows, geomIdx, titleIdx, labelIdx, valueIdx, rIdx, gIdx, bIdx, defColor]);
 
   // ── Map state ──────────────────────────────────────────────────────────────
   const [mapState, setMapState] = useState<MapState | null>(null);
@@ -310,7 +312,7 @@ export function GeoJsonMap({
       () => {
         setHoveredIdx(entry.idx);
         const [sx, sy] = geometryCenter(entry.geom, mapState, cw, ch);
-        setTooltip({ svgX: sx, svgY: sy, color: entry.color, label: entry.label, extraProps: entry.extraProps });
+        setTooltip({ svgX: sx, svgY: sy, color: entry.color, title: entry.title, label: entry.label, valueName: entry.valueName, value: entry.value });
       },
       () => { setHoveredIdx(null); setTooltip(null); },
     ));
@@ -345,35 +347,40 @@ export function GeoJsonMap({
   // ── Tooltip ────────────────────────────────────────────────────────────────
   let tooltipEl: React.ReactElement | null = null;
   if (tooltip) {
-    const hasExtra = tooltip.extraProps.length > 0;
-    const tooltipH = TOOLTIP_PAD_V * 2 + (tooltip.label ? TOOLTIP_HEADER_H : 0) + (hasExtra ? tooltip.extraProps.length * TOOLTIP_ROW_H : 0);
+    const rowCount = (tooltip.label ? 1 : 0) + (tooltip.value ? 1 : 0);
+    const tooltipH = TOOLTIP_PAD_V * 2 + (tooltip.title ? TOOLTIP_HEADER_H : 0) + rowCount * TOOLTIP_ROW_H;
     const GAP = 12;
     let top = tooltip.svgY - GAP - tooltipH;
     if (top < 4) top = tooltip.svgY + GAP;
     let left = tooltip.svgX - TOOLTIP_W / 2;
     left = Math.max(4, Math.min(cw - TOOLTIP_W - 4, left));
 
-    const cardBg = dark ? "#1F2335" : "#fff";
-    const border = `1px solid ${dark ? "#3A4060" : "#e0e0e0"}`;
+    const cardBg  = dark ? "#1F2335" : "#fff";
+    const border  = `1px solid ${dark ? "#3A4060" : "#e0e0e0"}`;
     const textMain = dark ? "#e0e0e0" : "#1a1a1a";
-    const textSub = dark ? "#9BA7B5" : "#666";
+    const textSub  = dark ? "#9BA7B5" : "#666";
 
     tooltipEl = (
       <div style={{ position: "absolute", top, left, width: TOOLTIP_W, pointerEvents: "none", zIndex: 9999 }}>
         <div style={{ background: cardBg, border, borderRadius: 6, boxShadow: "0 2px 10px rgba(0,0,0,0.18)", overflow: "hidden", display: "flex" }}>
           <div style={{ width: STRIP_W, background: tooltip.color, flexShrink: 0 }} />
           <div style={{ padding: `${TOOLTIP_PAD_V}px 10px`, minWidth: 0, flex: 1 }}>
+            {tooltip.title && (
+              <div style={{ fontSize: 12, fontWeight: 700, color: textMain, fontFamily: "sans-serif", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", marginBottom: rowCount > 0 ? 3 : 0 }}>
+                {tooltip.title}
+              </div>
+            )}
             {tooltip.label && (
-              <div style={{ fontSize: 12, fontWeight: 700, color: textMain, fontFamily: "sans-serif", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", marginBottom: hasExtra ? 4 : 0 }}>
+              <div style={{ fontSize: 11, color: textSub, fontFamily: "sans-serif", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                 {tooltip.label}
               </div>
             )}
-            {tooltip.extraProps.map(([k, v]) => (
-              <div key={k} style={{ fontSize: 11, color: textSub, fontFamily: "sans-serif", display: "flex", gap: 4, whiteSpace: "nowrap", overflow: "hidden" }}>
-                <span style={{ opacity: 0.7, flexShrink: 0 }}>{k}:</span>
-                <span style={{ fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis" }}>{v}</span>
+            {tooltip.value && (
+              <div style={{ fontSize: 11, color: textSub, fontFamily: "sans-serif", whiteSpace: "nowrap", marginTop: tooltip.label ? 1 : 0 }}>
+                {tooltip.valueName && <span style={{ opacity: 0.7 }}>{tooltip.valueName}: </span>}
+                <span style={{ fontWeight: 600, color: textMain }}>{tooltip.value}</span>
               </div>
-            ))}
+            )}
           </div>
         </div>
       </div>

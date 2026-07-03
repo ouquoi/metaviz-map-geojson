@@ -4,6 +4,30 @@ import type { Settings } from "./types";
 import { isNumericCol, isTextCol } from "./utils";
 
 const createVisualization: CreateCustomVisualization<Settings> = ({ defineSetting }) => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const ds = (def: any) => (defineSetting as any)(def);
+
+  // Helper: all columns as options
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const allOptions = (series: any) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const cols = (series?.[0]?.data?.cols ?? []) as any[];
+    return [
+      { name: "— none —", value: "" },
+      ...cols.map((c) => ({ name: c.display_name || c.name, value: c.name })),
+    ];
+  };
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const numericOptions = (series: any) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const cols = (series?.[0]?.data?.cols ?? []) as any[];
+    return [
+      { name: "— none —", value: "" },
+      ...cols.filter((c) => isNumericCol(c)).map((c) => ({ name: c.display_name || c.name, value: c.name })),
+    ];
+  };
+
   return defineConfig<Settings>({
     id: "map-geojson",
     getName: () => "Map GeoJSON",
@@ -21,14 +45,14 @@ const createVisualization: CreateCustomVisualization<Settings> = ({ defineSettin
       // ── Data ──────────────────────────────────────────────────────────
       geometryColumn: defineSetting({
         id: "geometryColumn",
-        title: "Geometry column (GeoJSON text)",
+        title: "Geometry column",
         widget: "select",
         getSection() { return "Data"; },
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         getDefault(series: any) {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const cols = (series?.[0]?.data?.cols ?? []) as any[];
-          const geo = cols.find((c) => /geom|geometry|geojson|shape|wkt/i.test(c.name));
+          const geo = cols.find((c) => /geom|geometry|geojson|shape/i.test(c.name));
           return (geo ?? cols.find((c) => isTextCol(c)) ?? cols[0])?.name ?? "";
         },
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -39,101 +63,87 @@ const createVisualization: CreateCustomVisualization<Settings> = ({ defineSettin
         },
       }),
 
-      labelColumn: defineSetting({
+      titleColumn: ds({
+        id: "titleColumn",
+        title: "Title column (tooltip header)",
+        widget: "select",
+        getSection() { return "Data"; },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        getDefault(series: any) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const cols = (series?.[0]?.data?.cols ?? []) as any[];
+          const text = cols.filter((c: any) => isTextCol(c));
+          return (text.find((c: any) => /name|nom|title|titre|label/i.test(c.name)) ?? text[0])?.name ?? "";
+        },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        getProps(series: any) { return { options: allOptions(series) }; },
+      }),
+
+      labelColumn: ds({
         id: "labelColumn",
-        title: "Label column (tooltip)",
+        title: "Label column (tooltip sub-label)",
         widget: "select",
         getSection() { return "Data"; },
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        getDefault(series: any) {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const cols = (series?.[0]?.data?.cols ?? []) as any[];
-          const text = cols.filter((c) => isTextCol(c));
-          return (text.find((c) => /name|nom|label|title/i.test(c.name)) ?? text[0])?.name ?? "";
-        },
+        getDefault(_series: any) { return ""; },
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        getProps(series: any) {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const cols = (series?.[0]?.data?.cols ?? []) as any[];
-          return {
-            options: [
-              { name: "— none —", value: "" },
-              ...cols.map((c) => ({ name: c.display_name || c.name, value: c.name })),
-            ],
-          };
-        },
+        getProps(series: any) { return { options: allOptions(series) }; },
       }),
 
-      redColumn: defineSetting({
+      valueColumn: ds({
+        id: "valueColumn",
+        title: "Value column (metric)",
+        widget: "select",
+        getSection() { return "Data"; },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        getDefault(_series: any) { return ""; },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        getProps(series: any) { return { options: numericOptions(series) }; },
+      }),
+
+      redColumn: ds({
         id: "redColumn",
-        title: "Red (R) column",
+        title: "Color — Red (R)",
         widget: "select",
         getSection() { return "Data"; },
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         getDefault(series: any) {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const cols = (series?.[0]?.data?.cols ?? []) as any[];
-          return cols.find((c) => /^r$/i.test(c.name) || /\bred\b|\brouge\b/i.test(c.name))?.name ?? "";
+          return cols.find((c: any) => /^r$/i.test(c.name) || /\bred\b|\brouge\b/i.test(c.name))?.name ?? "";
         },
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        getProps(series: any) {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const cols = (series?.[0]?.data?.cols ?? []) as any[];
-          return {
-            options: [
-              { name: "— none —", value: "" },
-              ...cols.filter((c) => isNumericCol(c)).map((c) => ({ name: c.display_name || c.name, value: c.name })),
-            ],
-          };
-        },
+        getProps(series: any) { return { options: numericOptions(series) }; },
       }),
 
-      greenColumn: defineSetting({
+      greenColumn: ds({
         id: "greenColumn",
-        title: "Green (V) column",
+        title: "Color — Green (G/V)",
         widget: "select",
         getSection() { return "Data"; },
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         getDefault(series: any) {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const cols = (series?.[0]?.data?.cols ?? []) as any[];
-          return cols.find((c) => /^[gv]$/i.test(c.name) || /\bgreen\b|\bvert\b/i.test(c.name))?.name ?? "";
+          return cols.find((c: any) => /^[gv]$/i.test(c.name) || /\bgreen\b|\bvert\b/i.test(c.name))?.name ?? "";
         },
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        getProps(series: any) {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const cols = (series?.[0]?.data?.cols ?? []) as any[];
-          return {
-            options: [
-              { name: "— none —", value: "" },
-              ...cols.filter((c) => isNumericCol(c)).map((c) => ({ name: c.display_name || c.name, value: c.name })),
-            ],
-          };
-        },
+        getProps(series: any) { return { options: numericOptions(series) }; },
       }),
 
-      blueColumn: defineSetting({
+      blueColumn: ds({
         id: "blueColumn",
-        title: "Blue (B) column",
+        title: "Color — Blue (B)",
         widget: "select",
         getSection() { return "Data"; },
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         getDefault(series: any) {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const cols = (series?.[0]?.data?.cols ?? []) as any[];
-          return cols.find((c) => /^b$/i.test(c.name) || /\bblue\b|\bbleu\b/i.test(c.name))?.name ?? "";
+          return cols.find((c: any) => /^b$/i.test(c.name) || /\bblue\b|\bbleu\b/i.test(c.name))?.name ?? "";
         },
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        getProps(series: any) {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const cols = (series?.[0]?.data?.cols ?? []) as any[];
-          return {
-            options: [
-              { name: "— none —", value: "" },
-              ...cols.filter((c) => isNumericCol(c)).map((c) => ({ name: c.display_name || c.name, value: c.name })),
-            ],
-          };
-        },
+        getProps(series: any) { return { options: numericOptions(series) }; },
       }),
 
       // ── Appearance ────────────────────────────────────────────────────

@@ -61,7 +61,9 @@ const MOCK_SERIES = [
 
 const DEFAULT_SETTINGS: Settings = {
   geometryColumn: "geometry",
-  labelColumn:    "nom_ligne",
+  titleColumn:    "nom_ligne",
+  labelColumn:    "mode",
+  valueColumn:    "",
   redColumn:      "r",
   greenColumn:    "v",
   blueColumn:     "b",
