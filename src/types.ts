@@ -3,9 +3,7 @@ export type Settings = {
   titleColumn?: string;
   labelColumn?: string;
   valueColumn?: string;
-  redColumn?: string;
-  greenColumn?: string;
-  blueColumn?: string;
+  colorColumn?: string;
   defaultColor?: string;
   strokeWidth?: number;
   fillOpacity?: number;

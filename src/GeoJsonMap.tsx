@@ -181,9 +181,7 @@ export function GeoJsonMap({
   const titleCol   = settings.titleColumn ?? "";
   const labelCol   = settings.labelColumn ?? "";
   const valueCol   = settings.valueColumn ?? "";
-  const redCol     = settings.redColumn ?? "";
-  const greenCol   = settings.greenColumn ?? "";
-  const blueCol    = settings.blueColumn ?? "";
+  const colorCol   = settings.colorColumn ?? "";
   const defColor   = settings.defaultColor ?? "#509EE3";
   const strokeWidth = Math.max(1, Math.min(8, settings.strokeWidth ?? 2));
   const fillOpacity = Math.max(0, Math.min(1, settings.fillOpacity ?? 0.4));
@@ -201,9 +199,7 @@ export function GeoJsonMap({
   const titleIdx = colIdx(titleCol);
   const labelIdx = colIdx(labelCol);
   const valueIdx = colIdx(valueCol);
-  const rIdx     = colIdx(redCol);
-  const gIdx     = colIdx(greenCol);
-  const bIdx     = colIdx(blueCol);
+  const colorIdx = colIdx(colorCol);
 
   const features: FeatureEntry[] = useMemo(() => {
     if (geomIdx < 0) return [];
@@ -213,12 +209,11 @@ export function GeoJsonMap({
       const geom = parseGeometry(row[geomIdx]);
       if (!geom) continue;
 
-      const r = rIdx >= 0 ? Number(row[rIdx]) : NaN;
-      const g = gIdx >= 0 ? Number(row[gIdx]) : NaN;
-      const b = bIdx >= 0 ? Number(row[bIdx]) : NaN;
-      const color = (!isNaN(r) && !isNaN(g) && !isNaN(b))
-        ? `rgb(${Math.round(r)},${Math.round(g)},${Math.round(b)})`
-        : defColor;
+      const rawColor = colorIdx >= 0 ? String(row[colorIdx] ?? "").trim() : "";
+      const hexColor = /^#?[0-9a-f]{6}$/i.test(rawColor)
+        ? (rawColor.startsWith("#") ? rawColor : `#${rawColor}`)
+        : null;
+      const color = hexColor ?? defColor;
 
       const title     = titleIdx >= 0 && row[titleIdx] != null ? String(row[titleIdx]) : "";
       const label     = labelIdx >= 0 && row[labelIdx] != null ? String(row[labelIdx]) : "";
@@ -230,7 +225,7 @@ export function GeoJsonMap({
     }
     return result;
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rows, geomIdx, titleIdx, labelIdx, valueIdx, rIdx, gIdx, bIdx, defColor]);
+  }, [rows, geomIdx, titleIdx, labelIdx, valueIdx, colorIdx, defColor]);
 
   // ── Map state ──────────────────────────────────────────────────────────────
   const [mapState, setMapState] = useState<MapState | null>(null);

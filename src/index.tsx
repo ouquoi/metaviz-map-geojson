@@ -7,7 +7,6 @@ const createVisualization: CreateCustomVisualization<Settings> = ({ defineSettin
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const ds = (def: any) => (defineSetting as any)(def);
 
-  // Helper: all columns as options
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const allOptions = (series: any) => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -101,49 +100,19 @@ const createVisualization: CreateCustomVisualization<Settings> = ({ defineSettin
         getProps(series: any) { return { options: numericOptions(series) }; },
       }),
 
-      redColumn: ds({
-        id: "redColumn",
-        title: "Color — Red (R)",
+      colorColumn: ds({
+        id: "colorColumn",
+        title: "Color column (hex #rrggbb)",
         widget: "select",
         getSection() { return "Data"; },
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         getDefault(series: any) {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const cols = (series?.[0]?.data?.cols ?? []) as any[];
-          return cols.find((c: any) => /^r$/i.test(c.name) || /\bred\b|\brouge\b/i.test(c.name))?.name ?? "";
+          return cols.find((c: any) => /^colou?r$|^couleur$|^hex$/i.test(c.name))?.name ?? "";
         },
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        getProps(series: any) { return { options: numericOptions(series) }; },
-      }),
-
-      greenColumn: ds({
-        id: "greenColumn",
-        title: "Color — Green (G/V)",
-        widget: "select",
-        getSection() { return "Data"; },
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        getDefault(series: any) {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const cols = (series?.[0]?.data?.cols ?? []) as any[];
-          return cols.find((c: any) => /^[gv]$/i.test(c.name) || /\bgreen\b|\bvert\b/i.test(c.name))?.name ?? "";
-        },
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        getProps(series: any) { return { options: numericOptions(series) }; },
-      }),
-
-      blueColumn: ds({
-        id: "blueColumn",
-        title: "Color — Blue (B)",
-        widget: "select",
-        getSection() { return "Data"; },
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        getDefault(series: any) {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const cols = (series?.[0]?.data?.cols ?? []) as any[];
-          return cols.find((c: any) => /^b$/i.test(c.name) || /\bblue\b|\bbleu\b/i.test(c.name))?.name ?? "";
-        },
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        getProps(series: any) { return { options: numericOptions(series) }; },
+        getProps(series: any) { return { options: allOptions(series) }; },
       }),
 
       // ── Appearance ────────────────────────────────────────────────────
