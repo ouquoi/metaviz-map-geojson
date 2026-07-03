@@ -1,6 +1,9 @@
 export type Settings = {
-  geojsonUrl?: string;
-  labelProperty?: string;
+  geometryColumn?: string;
+  labelColumn?: string;
+  redColumn?: string;
+  greenColumn?: string;
+  blueColumn?: string;
   defaultColor?: string;
   strokeWidth?: number;
   fillOpacity?: number;
@@ -16,14 +19,3 @@ export type GeoJSONGeometry =
   | { type: "MultiLineString"; coordinates: GeoJSONCoord[][] }
   | { type: "Polygon"; coordinates: GeoJSONCoord[][] }
   | { type: "MultiPolygon"; coordinates: GeoJSONCoord[][][] };
-
-export type GeoJSONFeature = {
-  type: "Feature";
-  geometry: GeoJSONGeometry;
-  properties: Record<string, unknown>;
-};
-
-export type GeoJSONFeatureCollection = {
-  type: "FeatureCollection";
-  features: GeoJSONFeature[];
-};
