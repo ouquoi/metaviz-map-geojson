@@ -3,6 +3,7 @@ export type Settings = {
   titleColumn?: string;
   labelColumn?: string;
   valueColumn?: string;
+  weightColumn?: string;
   colorMode?: "hex" | "rgb";
   colorColumn?: string;
   redColumn?: string;
@@ -10,6 +11,8 @@ export type Settings = {
   blueColumn?: string;
   defaultColor?: string;
   strokeWidth?: number;
+  strokeWidthMin?: number;
+  strokeWidthMax?: number;
   fillOpacity?: number;
   showTiles?: boolean;
 };

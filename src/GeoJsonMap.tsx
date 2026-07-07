@@ -78,6 +78,7 @@ type FeatureEntry = {
   idx: number;
   geom: GeoJSONGeometry;
   color: string;
+  strokeW: number;
   title: string;
   label: string;
   valueName: string;
@@ -89,16 +90,15 @@ function renderGeometry(
   state: MapState,
   vpW: number,
   vpH: number,
-  strokeWidth: number,
   fillOpacity: number,
   hovered: boolean,
   anyHovered: boolean,
   onEnter: () => void,
   onLeave: () => void,
 ): React.ReactElement | null {
-  const { geom, color, idx } = entry;
+  const { geom, color, strokeW, idx } = entry;
   const opacity = anyHovered ? (hovered ? 1 : 0.25) : 1;
-  const sw = hovered ? strokeWidth + 1 : strokeWidth;
+  const sw = hovered ? strokeW + 1 : strokeW;
 
   const lineProps = {
     fill: "none" as const,
@@ -191,6 +191,9 @@ export function GeoJsonMap({
   const titleCol   = settings.titleColumn ?? "";
   const labelCol   = settings.labelColumn ?? "";
   const valueCol   = settings.valueColumn ?? "";
+  const weightCol  = settings.weightColumn ?? "";
+  const strokeWidthMin = Math.max(0, settings.strokeWidthMin ?? 1);
+  const strokeWidthMax = Math.max(strokeWidthMin, settings.strokeWidthMax ?? 8);
   const colorMode  = settings.colorMode ?? "hex";
   const colorCol   = settings.colorColumn ?? "";
   const redCol     = settings.redColumn ?? "";
@@ -213,6 +216,7 @@ export function GeoJsonMap({
   const titleIdx = colIdx(titleCol);
   const labelIdx = colIdx(labelCol);
   const valueIdx = colIdx(valueCol);
+  const weightIdx = colIdx(weightCol);
   const colorIdx = colIdx(colorCol);
   const redIdx   = colIdx(redCol);
   const greenIdx = colIdx(greenCol);
@@ -221,11 +225,34 @@ export function GeoJsonMap({
 
   const features: FeatureEntry[] = useMemo(() => {
     if (geomIdx < 0) return [];
+
+    let minW = Infinity, maxW = -Infinity;
+    if (weightIdx >= 0) {
+      for (const row of rows) {
+        const w = Number(row[weightIdx]);
+        if (Number.isFinite(w)) {
+          if (w < minW) minW = w;
+          if (w > maxW) maxW = w;
+        }
+      }
+    }
+
     const result: FeatureEntry[] = [];
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
       const geom = parseGeometry(row[geomIdx]);
       if (!geom) continue;
+
+      let strokeW = strokeWidth;
+      if (weightIdx >= 0) {
+        const w = Number(row[weightIdx]);
+        if (Number.isFinite(w) && minW <= maxW) {
+          const t = minW === maxW ? 0.5 : (w - minW) / (maxW - minW);
+          strokeW = strokeWidthMin + t * (strokeWidthMax - strokeWidthMin);
+        } else {
+          strokeW = strokeWidthMin;
+        }
+      }
 
       let color = defColor;
       if (rgbReady) {
@@ -247,11 +274,14 @@ export function GeoJsonMap({
       const valueName = valueIdx >= 0 ? (cols[valueIdx].display_name || cols[valueIdx].name || "") : "";
       const value     = rawValue != null ? Number(rawValue).toLocaleString() : "";
 
-      result.push({ idx: i, geom, color, title, label, valueName, value });
+      result.push({ idx: i, geom, color, strokeW, title, label, valueName, value });
     }
     return result;
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rows, geomIdx, titleIdx, labelIdx, valueIdx, colorMode, colorIdx, redIdx, greenIdx, blueIdx, rgbReady, defColor]);
+  }, [
+    rows, geomIdx, titleIdx, labelIdx, valueIdx, colorMode, colorIdx, redIdx, greenIdx, blueIdx, rgbReady, defColor,
+    weightIdx, strokeWidth, strokeWidthMin, strokeWidthMax,
+  ]);
 
   // ── Map state ──────────────────────────────────────────────────────────────
   const [mapState, setMapState] = useState<MapState | null>(null);
@@ -328,7 +358,7 @@ export function GeoJsonMap({
     if (!mapState || features.length === 0) return null;
     const anyHovered = hoveredIdx !== null;
     return features.map((entry) => renderGeometry(
-      entry, mapState, cw, ch, strokeWidth, fillOpacity,
+      entry, mapState, cw, ch, fillOpacity,
       hoveredIdx === entry.idx, anyHovered,
       () => {
         setHoveredIdx(entry.idx);
@@ -337,7 +367,7 @@ export function GeoJsonMap({
       },
       () => { setHoveredIdx(null); setTooltip(null); },
     ));
-  }, [features, mapState, hoveredIdx, strokeWidth, fillOpacity, cw, ch]);
+  }, [features, mapState, hoveredIdx, fillOpacity, cw, ch]);
 
   // ── Empty states ───────────────────────────────────────────────────────────
   const msgStyle: React.CSSProperties = {

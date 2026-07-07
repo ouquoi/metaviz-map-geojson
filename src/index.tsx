@@ -100,6 +100,21 @@ const createVisualization: CreateCustomVisualization<Settings> = ({ defineSettin
         getProps(series: any) { return { options: numericOptions(series) }; },
       }),
 
+      weightColumn: ds({
+        id: "weightColumn",
+        title: "Weight column (line/border thickness)",
+        widget: "select",
+        getSection() { return "Data"; },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        getDefault(series: any) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const cols = (series?.[0]?.data?.cols ?? []) as any[];
+          return cols.find((c: any) => /weight|poids|importance|size/i.test(c.name))?.name ?? "";
+        },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        getProps(series: any) { return { options: numericOptions(series) }; },
+      }),
+
       colorMode: ds({
         id: "colorMode",
         title: "Color mode",
@@ -193,12 +208,34 @@ const createVisualization: CreateCustomVisualization<Settings> = ({ defineSettin
         getDefault() { return "#509EE3"; },
       }),
 
-      strokeWidth: defineSetting({
+      strokeWidth: ds({
         id: "strokeWidth",
         title: "Stroke width",
         widget: "number",
         getSection() { return "Appearance"; },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        getHidden(series: any, settings: any) { return !!settings?.weightColumn; },
         getDefault() { return 2; },
+      }),
+
+      strokeWidthMin: ds({
+        id: "strokeWidthMin",
+        title: "Stroke width — min (lowest weight)",
+        widget: "number",
+        getSection() { return "Appearance"; },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        getHidden(series: any, settings: any) { return !settings?.weightColumn; },
+        getDefault() { return 1; },
+      }),
+
+      strokeWidthMax: ds({
+        id: "strokeWidthMax",
+        title: "Stroke width — max (highest weight)",
+        widget: "number",
+        getSection() { return "Appearance"; },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        getHidden(series: any, settings: any) { return !settings?.weightColumn; },
+        getDefault() { return 8; },
       }),
 
       fillOpacity: defineSetting({
