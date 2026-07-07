@@ -3,7 +3,11 @@ export type Settings = {
   titleColumn?: string;
   labelColumn?: string;
   valueColumn?: string;
+  colorMode?: "hex" | "rgb";
   colorColumn?: string;
+  redColumn?: string;
+  greenColumn?: string;
+  blueColumn?: string;
   defaultColor?: string;
   strokeWidth?: number;
   fillOpacity?: number;

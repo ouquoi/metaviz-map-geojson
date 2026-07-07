@@ -31,6 +31,16 @@ function parseGeometry(raw: unknown): GeoJSONGeometry | null {
   return null;
 }
 
+function clampByte(n: number): number {
+  const rounded = Math.round(n);
+  return Math.max(0, Math.min(255, rounded));
+}
+
+function rgbToHex(r: number, g: number, b: number): string {
+  const toHex = (n: number) => clampByte(n).toString(16).padStart(2, "0");
+  return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+}
+
 function coordsBbox(coords: unknown): [number, number, number, number] {
   let minLat = Infinity, maxLat = -Infinity, minLon = Infinity, maxLon = -Infinity;
   function walk(c: unknown): void {
@@ -181,7 +191,11 @@ export function GeoJsonMap({
   const titleCol   = settings.titleColumn ?? "";
   const labelCol   = settings.labelColumn ?? "";
   const valueCol   = settings.valueColumn ?? "";
+  const colorMode  = settings.colorMode ?? "hex";
   const colorCol   = settings.colorColumn ?? "";
+  const redCol     = settings.redColumn ?? "";
+  const greenCol   = settings.greenColumn ?? "";
+  const blueCol    = settings.blueColumn ?? "";
   const defColor   = settings.defaultColor ?? "#509EE3";
   const strokeWidth = Math.max(1, Math.min(8, settings.strokeWidth ?? 2));
   const fillOpacity = Math.max(0, Math.min(1, settings.fillOpacity ?? 0.4));
@@ -200,6 +214,10 @@ export function GeoJsonMap({
   const labelIdx = colIdx(labelCol);
   const valueIdx = colIdx(valueCol);
   const colorIdx = colIdx(colorCol);
+  const redIdx   = colIdx(redCol);
+  const greenIdx = colIdx(greenCol);
+  const blueIdx  = colIdx(blueCol);
+  const rgbReady = colorMode === "rgb" && redIdx >= 0 && greenIdx >= 0 && blueIdx >= 0;
 
   const features: FeatureEntry[] = useMemo(() => {
     if (geomIdx < 0) return [];
@@ -209,11 +227,19 @@ export function GeoJsonMap({
       const geom = parseGeometry(row[geomIdx]);
       if (!geom) continue;
 
-      const rawColor = colorIdx >= 0 ? String(row[colorIdx] ?? "").trim() : "";
-      const hexColor = /^#?[0-9a-f]{6}$/i.test(rawColor)
-        ? (rawColor.startsWith("#") ? rawColor : `#${rawColor}`)
-        : null;
-      const color = hexColor ?? defColor;
+      let color = defColor;
+      if (rgbReady) {
+        const r = Number(row[redIdx]);
+        const g = Number(row[greenIdx]);
+        const b = Number(row[blueIdx]);
+        color = rgbToHex(Number.isFinite(r) ? r : 0, Number.isFinite(g) ? g : 0, Number.isFinite(b) ? b : 0);
+      } else if (colorMode === "hex") {
+        const rawColor = colorIdx >= 0 ? String(row[colorIdx] ?? "").trim() : "";
+        const hexColor = /^#?[0-9a-f]{6}$/i.test(rawColor)
+          ? (rawColor.startsWith("#") ? rawColor : `#${rawColor}`)
+          : null;
+        color = hexColor ?? defColor;
+      }
 
       const title     = titleIdx >= 0 && row[titleIdx] != null ? String(row[titleIdx]) : "";
       const label     = labelIdx >= 0 && row[labelIdx] != null ? String(row[labelIdx]) : "";
@@ -225,7 +251,7 @@ export function GeoJsonMap({
     }
     return result;
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rows, geomIdx, titleIdx, labelIdx, valueIdx, colorIdx, defColor]);
+  }, [rows, geomIdx, titleIdx, labelIdx, valueIdx, colorMode, colorIdx, redIdx, greenIdx, blueIdx, rgbReady, defColor]);
 
   // ── Map state ──────────────────────────────────────────────────────────────
   const [mapState, setMapState] = useState<MapState | null>(null);

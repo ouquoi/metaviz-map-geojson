@@ -39,7 +39,11 @@ FROM transit_lines
 | **Title column** | Column used as the tooltip header (bold). |
 | **Label column** | Column shown as a sub-label below the title in the tooltip. |
 | **Value column** | Numeric column shown as a metric in the tooltip. |
-| **Color column** | Column containing a hex color string (`#rrggbb` or `rrggbb`) for each feature. Auto-detected from columns named `color`, `couleur`, or `hex`. Falls back to **Default color** if the value is missing or invalid. |
+| **Color mode** | `Hex column` or `RGB columns`. Selects which of the settings below is used to compute each feature's color. Default: `Hex column`. |
+| **Color column** | *(Hex column mode)* Column containing a hex color string (`#rrggbb` or `rrggbb`) for each feature. Auto-detected from columns named `color`, `couleur`, or `hex`. Falls back to **Default color** if the value is missing or invalid. |
+| **Red column** | *(RGB columns mode)* Numeric column (0–255) for the red channel. Auto-detected from columns named `r`, `red`, or `rouge`. |
+| **Green column** | *(RGB columns mode)* Numeric column (0–255) for the green channel. Auto-detected from columns named `g`, `green`, or `vert`. |
+| **Blue column** | *(RGB columns mode)* Numeric column (0–255) for the blue channel. Auto-detected from columns named `b`, `blue`, or `bleu`. |
 
 #### Appearance
 
@@ -54,7 +58,7 @@ FROM transit_lines
 
 - Renders all GeoJSON geometry types: `Point`, `MultiPoint`, `LineString`, `MultiLineString`, `Polygon`, `MultiPolygon`
 - One SQL row = one GeoJSON feature
-- Per-feature hex color via a dedicated column
+- Per-feature color via a hex column or three separate RGB columns (0–255), with out-of-range values clamped and missing channels treated as `0`
 - Interactive tooltip on hover: title, label, and numeric value
 - Auto-fits the viewport to all features on load
 - Zoom and pan via mouse wheel and drag
@@ -68,7 +72,7 @@ FROM transit_lines
 | Title | No | Text | Shown as tooltip header |
 | Label | No | Text | Shown as tooltip sub-label |
 | Value | No | Number | Shown as a metric in the tooltip |
-| Color | No | Text | Hex color `#rrggbb` or `rrggbb`; falls back to default |
+| Color | No | Text or Number | Hex color `#rrggbb`/`rrggbb` (Hex column mode), or 3 numeric columns 0–255 (RGB columns mode); falls back to default |
 
 ## Development
 
