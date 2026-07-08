@@ -41,6 +41,27 @@ function rgbToHex(r: number, g: number, b: number): string {
   return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
 }
 
+function hexToRgb(hex: string): [number, number, number] {
+  const m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex.trim());
+  if (!m) return [235, 237, 240];
+  return [parseInt(m[1], 16), parseInt(m[2], 16), parseInt(m[3], 16)];
+}
+
+function lerpColor(a: string, b: string, t: number): string {
+  const [r1, g1, b1] = hexToRgb(a);
+  const [r2, g2, b2] = hexToRgb(b);
+  return rgbToHex(r1 + (r2 - r1) * t, g1 + (g2 - g1) * t, b1 + (b2 - b1) * t);
+}
+
+// Normalizes w into [0, 1] given the min/max of valid weights across renderable features.
+// Log compresses long-tailed distributions so a handful of extreme values don't
+// squash every other feature toward 0.
+function computeWeightT(w: number, minW: number, maxW: number, scale: "linear" | "log"): number {
+  if (minW === maxW) return 0.5;
+  if (scale === "log") return Math.log1p(w - minW) / Math.log1p(maxW - minW);
+  return (w - minW) / (maxW - minW);
+}
+
 function coordsBbox(coords: unknown): [number, number, number, number] {
   let minLat = Infinity, maxLat = -Infinity, minLon = Infinity, maxLon = -Infinity;
   function walk(c: unknown): void {
@@ -193,6 +214,7 @@ export function GeoJsonMap({
   const labelCol   = settings.labelColumn ?? "";
   const valueCol   = settings.valueColumn ?? "";
   const weightCol  = settings.weightColumn ?? "";
+  const weightScale = settings.weightScale ?? "linear";
   const strokeWidthMin = Math.max(0, settings.strokeWidthMin ?? 1);
   const strokeWidthMax = Math.max(strokeWidthMin, settings.strokeWidthMax ?? 8);
   const colorMode  = settings.colorMode ?? "hex";
@@ -200,6 +222,8 @@ export function GeoJsonMap({
   const redCol     = settings.redColumn ?? "";
   const greenCol   = settings.greenColumn ?? "";
   const blueCol    = settings.blueColumn ?? "";
+  const colorLow   = settings.colorLow ?? "#ebedf0";
+  const colorHigh  = settings.colorHigh ?? "#509EE3";
   const defColor   = settings.defaultColor ?? "#509EE3";
   const strokeWidth = Math.max(1, Math.min(8, settings.strokeWidth ?? 2));
   const fillOpacity = Math.max(0, Math.min(1, settings.fillOpacity ?? 0.4));
@@ -250,19 +274,20 @@ export function GeoJsonMap({
       const geom = parsedGeoms[i];
       if (!geom) continue;
 
-      let strokeW = strokeWidth;
-      if (weightIdx >= 0) {
+      let weightT: number | null = null;
+      if (weightIdx >= 0 && minW <= maxW) {
         const w = Number(row[weightIdx]);
-        if (Number.isFinite(w) && minW <= maxW) {
-          const t = minW === maxW ? 0.5 : (w - minW) / (maxW - minW);
-          strokeW = strokeWidthMin + t * (strokeWidthMax - strokeWidthMin);
-        } else {
-          strokeW = strokeWidthMin;
-        }
+        if (Number.isFinite(w)) weightT = computeWeightT(w, minW, maxW, weightScale);
       }
 
+      const strokeW = weightIdx >= 0
+        ? strokeWidthMin + (weightT ?? 0) * (strokeWidthMax - strokeWidthMin)
+        : strokeWidth;
+
       let color = defColor;
-      if (rgbReady) {
+      if (colorMode === "weight") {
+        color = lerpColor(colorLow, colorHigh, weightT ?? 0);
+      } else if (rgbReady) {
         const r = Number(row[redIdx]);
         const g = Number(row[greenIdx]);
         const b = Number(row[blueIdx]);
@@ -287,7 +312,7 @@ export function GeoJsonMap({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     rows, geomIdx, titleIdx, labelIdx, valueIdx, colorMode, colorIdx, redIdx, greenIdx, blueIdx, rgbReady, defColor,
-    weightIdx, strokeWidth, strokeWidthMin, strokeWidthMax,
+    weightIdx, weightScale, strokeWidth, strokeWidthMin, strokeWidthMax, colorLow, colorHigh,
   ]);
 
   // ── Map state ──────────────────────────────────────────────────────────────

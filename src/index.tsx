@@ -115,6 +115,24 @@ const createVisualization: CreateCustomVisualization<Settings> = ({ defineSettin
         getProps(series: any) { return { options: numericOptions(series) }; },
       }),
 
+      weightScale: ds({
+        id: "weightScale",
+        title: "Weight scale",
+        widget: "select",
+        getSection() { return "Data"; },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        getHidden(series: any, settings: any) { return !settings?.weightColumn; },
+        getDefault() { return "linear"; },
+        getProps() {
+          return {
+            options: [
+              { name: "Linear", value: "linear" },
+              { name: "Logarithmic", value: "log" },
+            ],
+          };
+        },
+      }),
+
       colorMode: ds({
         id: "colorMode",
         title: "Color mode",
@@ -126,6 +144,7 @@ const createVisualization: CreateCustomVisualization<Settings> = ({ defineSettin
             options: [
               { name: "Hex column", value: "hex" },
               { name: "RGB columns", value: "rgb" },
+              { name: "Weight gradient", value: "weight" },
             ],
           };
         },
@@ -200,11 +219,33 @@ const createVisualization: CreateCustomVisualization<Settings> = ({ defineSettin
       }),
 
       // ── Appearance ────────────────────────────────────────────────────
-      defaultColor: defineSetting({
+      defaultColor: ds({
         id: "defaultColor",
         title: "Default color",
         widget: "color",
         getSection() { return "Appearance"; },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        getHidden(series: any, settings: any) { return settings?.colorMode === "weight"; },
+        getDefault() { return "#509EE3"; },
+      }),
+
+      colorLow: ds({
+        id: "colorLow",
+        title: "Color — low weight",
+        widget: "color",
+        getSection() { return "Appearance"; },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        getHidden(series: any, settings: any) { return settings?.colorMode !== "weight"; },
+        getDefault() { return "#ebedf0"; },
+      }),
+
+      colorHigh: ds({
+        id: "colorHigh",
+        title: "Color — high weight",
+        widget: "color",
+        getSection() { return "Appearance"; },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        getHidden(series: any, settings: any) { return settings?.colorMode !== "weight"; },
         getDefault() { return "#509EE3"; },
       }),
 

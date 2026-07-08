@@ -4,11 +4,14 @@ export type Settings = {
   labelColumn?: string;
   valueColumn?: string;
   weightColumn?: string;
-  colorMode?: "hex" | "rgb";
+  weightScale?: "linear" | "log";
+  colorMode?: "hex" | "rgb" | "weight";
   colorColumn?: string;
   redColumn?: string;
   greenColumn?: string;
   blueColumn?: string;
+  colorLow?: string;
+  colorHigh?: string;
   defaultColor?: string;
   strokeWidth?: number;
   strokeWidthMin?: number;
