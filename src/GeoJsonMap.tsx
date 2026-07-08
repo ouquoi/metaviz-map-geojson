@@ -187,7 +187,6 @@ type TooltipData = {
   svgX: number;
   svgY: number;
   color: string;
-  strokeW: number;
   title: string;
   label: string;
   valueName: string;
@@ -395,7 +394,7 @@ export function GeoJsonMap({
       () => {
         setHoveredIdx(entry.idx);
         const [sx, sy] = geometryCenter(entry.geom, mapState, cw, ch);
-        setTooltip({ svgX: sx, svgY: sy, color: entry.color, strokeW: entry.strokeW, title: entry.title, label: entry.label, valueName: entry.valueName, value: entry.value });
+        setTooltip({ svgX: sx, svgY: sy, color: entry.color, title: entry.title, label: entry.label, valueName: entry.valueName, value: entry.value });
       },
       () => { setHoveredIdx(null); setTooltip(null); },
     ));
@@ -430,7 +429,7 @@ export function GeoJsonMap({
   // ── Tooltip ────────────────────────────────────────────────────────────────
   let tooltipEl: React.ReactElement | null = null;
   if (tooltip) {
-    const rowCount = (tooltip.label ? 1 : 0) + (tooltip.value ? 1 : 0) + (weightIdx >= 0 ? 1 : 0);
+    const rowCount = (tooltip.label ? 1 : 0) + (tooltip.value ? 1 : 0);
     const tooltipH = TOOLTIP_PAD_V * 2 + (tooltip.title ? TOOLTIP_HEADER_H : 0) + rowCount * TOOLTIP_ROW_H;
     const GAP = 12;
     let top = tooltip.svgY - GAP - tooltipH;
@@ -462,12 +461,6 @@ export function GeoJsonMap({
               <div style={{ fontSize: 11, color: textSub, fontFamily: "sans-serif", whiteSpace: "nowrap", marginTop: tooltip.label ? 1 : 0 }}>
                 {tooltip.valueName && <span style={{ opacity: 0.7 }}>{tooltip.valueName}: </span>}
                 <span style={{ fontWeight: 600, color: textMain }}>{tooltip.value}</span>
-              </div>
-            )}
-            {weightIdx >= 0 && (
-              <div style={{ fontSize: 11, color: textSub, fontFamily: "sans-serif", whiteSpace: "nowrap", marginTop: (tooltip.label || tooltip.value) ? 1 : 0 }}>
-                <span style={{ opacity: 0.7 }}>Line width: </span>
-                <span style={{ fontWeight: 600, color: textMain }}>{tooltip.strokeW.toFixed(1)}px</span>
               </div>
             )}
           </div>
